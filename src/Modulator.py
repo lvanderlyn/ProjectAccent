@@ -84,10 +84,10 @@ def stripWhite(string):
     
 
 if __name__ == '__main__':
-    n = Modulator("../test/english44clipped.TextGrid")
-    words = n.text_grid.tiers["words"]
-    start = words[1]["start"]
-    end = words[1]["end"]
-    print(start, end)
-    slice_wav("../test/english44clipped.wav", "outTest.wav", int(start*1000), int(end*1000))
+    # n = Modulator("../test/english44clipped.TextGrid")
+    # words = n.text_grid.tiers["words"]
+    # start = words[1]["start"]
+    # end = words[1]["end"]
+    # print(start, end)
+    slice_wav("../test/english44clipped.wav", "outTest.wav", int(2*1000), int(3*1000))
 
