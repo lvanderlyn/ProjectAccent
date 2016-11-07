@@ -77,14 +77,15 @@ def interpolate(indexes, fs, amps):
         index2 = indexes[i+1]
 
         rise = int(amps[index2] - amps[index1])
-        run = int(fs[index2] - fs[index1])
+        # run = int(fs[index2] - fs[index1])
+        run = int(index2 - index1)
         k = float(rise/float(run))
         c = amps[index1]
 
         ret_val[index1:index2] = [(k*x) + c for x in range(0, index2-index1)]
-    N = 30
+    N = 10
     ys = np.convolve(ret_val, np.ones((N))/N, mode='valid')
-
+    # ys = ret_val
     return fs[:len(ys)], ys
 
 
