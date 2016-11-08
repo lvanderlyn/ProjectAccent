@@ -1,4 +1,6 @@
 import wave
+import numpy as np
+from scipy.io import wavfile
 
 class Modulator(object):
     """docstring for Modulator"""
@@ -54,7 +56,7 @@ class TextGrid(object):
         return name, intervals
     
     def parseInterval(self, interval):
-        return dict([("start", float(stripWhite(interval[0]))), ("end", float(stripWhite(interval[1]))), ("name", stripWhite(interval[2]))])
+        return dict([("start", float(stripWhite(interval[0]))), ("end", float(stripWhite(interval[1]))), ("name", stripWhite(interval[2])), ("length", float(stripWhite(interval[1])) -  float(stripWhite(interval[0])))])
 
 """
 Utilities
@@ -81,13 +83,81 @@ def slice_wav(in_name, out_filename, start_ms, end_ms):
 def stripWhite(string):
     start = string.find("=")+1
     return string[start:-1]
-    
+
+def prosodicRatio(learner_tiers, teacher_tiers):
+    alpha = []
+    for i in range(len(teacher_tiers)):
+        alpha.append(learner_tiers[i]["length"]/teacher_tiers[i]["length"])
+    return alpha
+
+def stretch(sound_array, f, window_size, h):
+    """ Stretches the sound by a factor `f` """
+
+    phase  = np.zeros(window_size)
+    hanning_window = np.hanning(window_size)
+    result = np.zeros( len(sound_array) /f + window_size)
+
+    for i in np.arange(0, len(sound_array)-(window_size+h), h*f):
+
+        # two potentially overlapping subarrays
+        a1 = sound_array[i: i + window_size]
+        a2 = sound_array[i + h: i + window_size + h]
+
+        # resynchronize the second array on the first
+        s1 =  np.fft.fft(hanning_window * a1)
+        s2 =  np.fft.fft(hanning_window * a2)
+        phase = (phase + np.angle(s2/s1)) % 2*np.pi
+        a2_rephased = np.fft.ifft(np.abs(s2)*np.exp(1j*phase))
+        a3_rephased = [float(i) for i in a2_rephased]
+
+
+        # add to result
+        i2 = int(i/f)
+        result[i2 : i2 + window_size] += hanning_window*a3_rephased
+
+    result = ((2**(16-4)) * result/result.max()) # normalize (16bit)
+
+    return result.astype('int16')
+
+def stich(learner_text_grid_words, alpha, learner_sound_array, fps):
+    #cut the learner sound array into each word segment section
+    word_segment = []
+    for i in range(len(alpha)):
+        start_frame = int(learner_text_grid_words[i]["start"]*fps)
+        end_frame = int(learner_text_grid_words[i]["end"]*fps)
+        word_segment.append(learner_sound_array[start_frame:end_frame])
+        
+    #stretches and stiches together the different time-segments
+    stiched = []
+    for i in range(len(alpha)):
+        n = 2**11
+        h = n/4
+        if alpha[i]>= 4:
+            factor = 4
+        elif alpha[i] <=0.25:
+            factor = 0.25
+        else:
+            factor = alpha[i]
+        stretched = stretch(word_segment[i], factor, n,h)
+        stiched.extend(stretched)
+    return np.asarray(stiched)
 
 if __name__ == '__main__':
-    # n = Modulator("../test/english44clipped.TextGrid")
-    # words = n.text_grid.tiers["words"]
+    teacher = Modulator("../test/english44clipped.TextGrid")
+    learner = Modulator("../test/japanese18clipped.TextGrid")
+    alpha = prosodicRatio(learner.text_grid.tiers["words"],teacher.text_grid.tiers["words"])
+    
+    fps, sound = wavfile.read('../test/english44clipped.wav')
+    sound1 = stich(learner.text_grid.tiers["words"], alpha, sound, fps)
+    print(len(sound),len(sound1))
+    wavfile.write('../test/jpToEng(prosodic2-11).wav',fps,sound1)
+
+    # words = n.text_grid.tiers["phones"]
     # start = words[1]["start"]
     # end = words[1]["end"]
-    # print(start, end)
-    slice_wav("../test/english44clipped.wav", "outTest.wav", int(2*1000), int(3*1000))
+    # name = words[1]["name"]
+    # length = words[1]["length"]
+
+    # print(start, end, name, length)
+    # slice_wav("../test/english44clipped.wav", "outTest.wav", int(2*1000), int(3*1000))
 
