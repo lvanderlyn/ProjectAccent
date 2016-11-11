@@ -121,6 +121,7 @@ def stretch(sound_array, f, window_size, h):
 
 def stich(learner_text_grid_words, alpha, learner_sound_array, fps):
     #cut the learner sound array into each word segment section
+    np.set_printoptions(threshold=np.nan)
     word_segment = []
     for i in range(len(alpha)):
         start_frame = int(learner_text_grid_words[i]["start"]*fps)
@@ -129,6 +130,7 @@ def stich(learner_text_grid_words, alpha, learner_sound_array, fps):
         
     #stretches and stiches together the different time-segments
     stiched = []
+    midword = [0]
     for i in range(len(alpha)):
         n = 2**11
         h = n/4
@@ -139,18 +141,21 @@ def stich(learner_text_grid_words, alpha, learner_sound_array, fps):
         else:
             factor = alpha[i]
         stretched = stretch(word_segment[i], factor, n,h)
-        stiched.extend(stretched)
+        stiched.extend(np.trim_zeros(stretched))
+        midword.append(int(len(stiched) - len(stretched)/2))
+    midword.append(len(stiched))
     return np.asarray(stiched)
 
+
 if __name__ == '__main__':
-    teacher = Modulator("../test/english44clipped.TextGrid")
-    learner = Modulator("../test/japanese18clipped.TextGrid")
+    learner = Modulator("../test/english44clipped.TextGrid")
+    teacher = Modulator("../test/japanese18clipped.TextGrid")
     alpha = prosodicRatio(learner.text_grid.tiers["words"],teacher.text_grid.tiers["words"])
     
     fps, sound = wavfile.read('../test/english44clipped.wav')
     sound1 = stich(learner.text_grid.tiers["words"], alpha, sound, fps)
-    print(len(sound),len(sound1))
-    wavfile.write('../test/jpToEng(prosodic2-11).wav',fps,sound1)
+    wavfile.write('../test/engToJp(prosodicsmoothed).wav',fps,sound1)
+    print(np.mean(sound), np.mean(sound1))
 
     # words = n.text_grid.tiers["phones"]
     # start = words[1]["start"]
