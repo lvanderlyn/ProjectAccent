@@ -15,70 +15,89 @@ from scipy.io import wavfile
 
 class Modulator(object):
     """docstring for Modulator"""
-    def __init__(self, file_name):
-        self.text_grid = TextGrid()
-        self.text_grid.parse_file(file_name)
+    def __init__(self, learner_textgrid, teacher_textgrid, learner_wav, teacher_wav):
+        self.teacher_textgrid = TextGrid()
+        self.teacher_textgrid.parse_file(teacher_textgrid)
+        self.learner_textgrid = TextGrid()
+        self.learner_textgrid.parse_file(learner_textgrid)
 
-    def get_envelope(self, file_name):
-        # wave = td.read_wave("outTest.wav")
-        wave = td.read_wave(file_name)
-        # fig1 = plt.figure(1)
-        # plt.subplot(211)
-        # plt.plot(wave.ts, wave.ys)
-        # plt.title('Original Wave Clip')
+        self.learner_wav = td.read_wave(learner_wav)
+        self.teacher_wav = td.read_wave(teacher_wav)
 
-        hanning = np.hanning(len(wave))
+    def get_envelope(self, wave):
+        # wave = td.read_wave(file_name)
+        # hanning = np.hanning(len(wave.ys))
+        # wave.window(hanning)
+        spectrum = wave.make_spectrum()
+        # spectrum.plot()   
+        # tp.show()
 
-        hanwave = wave
-        hanwave.window(hanning)
 
-        ##frequency domain plotting stuff
-        spec = wave.make_spectrum()
-        hanspec = hanwave.make_spectrum()
+        # wave = spectrum.make_wave()
+        # wave.play("outtest.wav")
+        ys = spectrum.hs
 
-        ys = hanspec.amps
-        xs = hanspec.fs
         indexes = peakutils.indexes(ys, thres=0.02/max(ys), min_dist=15)
+        envelope = interpolate(indexes, np.real(ys))
+        envelope = np.append(envelope, np.ones((len(ys) - len(envelope))))
 
-        env_xs, env_ys = interpolate(indexes, xs, ys)
-
-        # fig4 = plt.figure()
-        # plt.plot(spec.fs, spec.amps, label="signal")
-        # plt.plot(env_xs, env_ys, label='window')
-        # plt.plot([spec.fs[i] for i in indexes], [spec.amps[i] for i in indexes], label='peaks')
-
+        # fig1 = plt.figure(1)
+        # plt.plot(ys, label="signal")
+        # plt.plot(envelope, label="envelope")
         # plt.legend()
-        # plt.xlim([0,8000])
-
-        # ##Low pass filter the analytic signal
-        # N=10
-        # Fc=40
-        # Fs=1600
-        # # provide them to firwin
-        # h=scipy.signal.firwin( numtaps=N, cutoff=2, nyq = 800)
-        # # filtEnve=scipy.signal.lfilter( h, 1.0, hanspec.amps) # 'x' is the time-series data you are filtering
-
-        # plt.plot(spec.fs, filtEnve, label='envelope')
-        # plt.plot(spec.fs, spec.amps/filtEnve, label='envelope')
-
-        fig5 = plt.figure()
-        plt.plot(spec.fs[:len(divided_amps)], divided_amps)
-
-
-        #Trying to use peaks to generate envelope
-        # peaks = scipy.signal.find_peaks_cwt(hanspec.amps, np.arange(1,100))
-        # plt.plot(peaks, hanspec.amps[peaks])
-        # plt.yscale('log')
         # plt.show()
 
+        return spectrum, envelope
 
-    def convert_spectrum(self, teacher_wav, learner_wav):
-        learner_env = self.get_envelope(learner_wav)
-        teacher_env - self.get_envelope(teacher_wav)
-        
-        divided_amps = np.array(spec.amps[:len(env_ys)])/np.array(env_ys)
 
-        pass
+    def convert_spectrum(self):
+        ts = []
+        ys = []
+        for i in range(len(self.learner_textgrid.tiers["phones"])):
+            word = self.learner_textgrid.tiers["phones"][i]
+            print(word)
+            if i == 36:
+                break
+            elif word["name"] != ' "sil"':
+                learner_slice = self.learner_wav.segment(start=word["start"], duration=word["length"])
+                teacher_slice = self.teacher_wav.segment(start=self.teacher_textgrid.tiers["phones"][i]["start"], duration=self.teacher_textgrid.tiers["phones"][i]["length"])
+
+
+                learner_spec, learner_env = self.get_envelope(learner_slice)
+                teacher_spec, teacher_env = self.get_envelope(teacher_slice)
+
+                # fig1 = plt.figure(1)
+                # plt.plot(learner_spec.fs, learner_spec.amps, label="learner")
+                # plt.plot(teacher_spec.fs, teacher_spec.amps, label="teacher")                
+
+                if len(learner_spec.hs) > len(teacher_spec.hs):
+                    learner_amps = learner_spec.hs/learner_env
+                    teacher_amps = np.append(teacher_spec.hs, np.zeros(len(learner_spec.hs) - len(teacher_spec.hs)))
+                    teacher_env = np.append(teacher_env, np.zeros(len(learner_spec.hs) - len(teacher_env)))
+                else:
+                    learner_amps = np.append(learner_spec.hs/learner_env, np.zeros(len(teacher_spec.hs) - len(learner_spec.hs)))
+                    teacher_amps = teacher_spec.hs
+
+                learner_amps = learner_amps * teacher_env
+                # plt.plot(np.absolute(learner_amps), label="after")
+                # plt.legend()
+                # plt.show()
+
+                # wave = td.Spectrum(new_amps, learner_spec.fs[:len(new_amps)], teacher_slice.framerate, True).make_wave()
+                # wave = td.Spectrum(learner_spec.hs, learner_spec.fs, teacher_slice.framerate, False).make_wave()
+                print("TEACHER", teacher_slice.framerate)
+                print("LEARNER", learner_slice.framerate)
+                wave = td.Spectrum(learner_amps, learner_spec.fs, learner_slice.framerate, True).make_wave()
+
+
+                # plt.plot(wave.ts, wave.ys, label="after")
+
+                ts += [t for t in wave.ts]
+                ys += [y for y in wave.ys]
+
+        wave.ts = np.array(ts)
+        wave.ys = np.array(ys)
+        wave.play("outtest.wav") 
 
     def shift_accent(self):
         pass
@@ -161,9 +180,9 @@ def stripWhite(string):
     return string[start:-1]
 
 
-def interpolate(indexes, fs, amps):
+def interpolate(indexes, amps):
     indexes = [0] + [i for i in indexes]
-    ret_val = np.ones(len(fs))
+    ret_val = np.ones(len(amps))
     ret_val = [n for n in ret_val]
 
     for i in range(len(indexes)-1):
@@ -179,8 +198,7 @@ def interpolate(indexes, fs, amps):
         ret_val[index1:index2] = [(k*x) + c for x in range(0, index2-index1)]
     N = 10
     ys = np.convolve(ret_val, np.ones((N))/N, mode='valid')
-    # ys = ret_val
-    return fs[:len(ys)], ys
+    return ys
 
 
 def prosodicRatio(learner_tiers, teacher_tiers):
@@ -252,31 +270,42 @@ def stich(learner_text_grid_words, alpha, learner_sound_array, fps):
 
 
 if __name__ == '__main__':
-    learner = Modulator("../test/english44clipped.TextGrid")
-    teacher = Modulator("../test/japanese18clipped.TextGrid")
-    n = Modulator("../test/english44clipped.TextGrid")
-    words = n.text_grid.tiers["phones"]
-    start = words[2]["start"]
-    end = words[2]["end"]
-    slice_wav("../test/english44clipped.wav", "outTest.wav", int(start*1000), int(end*1000))
-    n.get_envelope()
+    test = Modulator("../test/english44clipped.TextGrid","../test/japanese18clipped.TextGrid","../test/english44clipped.wav","../test/japanese18clipped.wav")
+    
 
-    # print(start, end)
+    test = Modulator("../test/japanese18clipped.TextGrid","../test/english44clipped.TextGrid","../test/japanese18clipped.wav","../test/english44clipped.wav")
+
+    # test = Modulator("../test/english44clipped.TextGrid", "../test/japanese18clipped.TextGrid", "../test/english44clipped.wav", "../test/japanese18clipped.wav")
+    # n = Modulator("../test/english44clipped.TextGrid")
+    # current_word = 3
+    # l_words = learner.text_grid.tiers["phones"]
+    # l_start = l_words[current_word]["start"]
+    # l_end = l_words[current_word]["end"]
+    # t_words = teacher.text_grid.tiers["phones"]
+    # t_start = t_words[current_word]["start"]
+    # t_end = t_words[current_word]["end"]
+    # slice_wav("../test/japanese18clipped.wav", "teacher_1.wav", int(t_start*1000), int(t_end*1000))
+    # slice_wav("../test/english44clipped.wav", "learner_1.wav", int(l_start*1000), int(l_end*1000))
+    # n.get_envelope("outTest.wav")
+
+
+    test.convert_spectrum()
+
 
     # teacher = Modulator("../test/english44clipped.TextGrid")
     # learner = Modulator("../test/japanese18clipped.TextGrid")
-    # alpha = prosodicRatio(learner.text_grid.tiers["words"],teacher.text_grid.tiers["words"])
+    # alpha = prosodicRatio(test.learner_textgrid.tiers["words"],test.teacher_textgrid.tiers["words"])
     
     # fps, sound = wavfile.read('../test/english44clipped.wav')
-    # sound1 = stich(learner.text_grid.tiers["words"], alpha, sound, fps)
+    # sound1 = stich(test.learner_textgrid.tiers["words"], alpha, sound, fps)
     # print(len(sound),len(sound1))
     # wavfile.write('../test/jpToEng(prosodic2-11).wav',fps,sound1)
 
-    alpha = prosodicRatio(learner.text_grid.tiers["words"],teacher.text_grid.tiers["words"])
+    # alpha = prosodicRatio(test.learner_textgrid.tiers["words"],test.teacher_textgrid.tiers["words"])
     
-    fps, sound = wavfile.read('../test/english44clipped.wav')
-    sound1 = stich(learner.text_grid.tiers["words"], alpha, sound, fps)
-    wavfile.write('../test/engToJp(prosodicsmoothed).wav',fps,sound1)
-    print(np.mean(sound), np.mean(sound1))
-    print(len(sound),len(sound1))
-    wavfile.write('../test/jpToEng(prosodic2-11).wav',fps,sound1)
+    # fps, sound = wavfile.read('../test/english44clipped.wav')
+    # sound1 = stich(test.learner_textgrid.tiers["words"], alpha, sound, fps)
+    # wavfile.write('../test/engToJp(prosodicsmoothed).wav',fps,sound1)
+    # print(np.mean(sound), np.mean(sound1))
+    # print(len(sound),len(sound1))
+    # wavfile.write('../test/jpToEng(prosodic2-11).wav',fps,sound1)
