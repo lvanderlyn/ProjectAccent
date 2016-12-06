@@ -4,7 +4,7 @@ Created on Thu Feb 27 19:34:24 2014
 
 @author: pruvolo
 """
-
+import sys
 import pygame
 from pygame.locals import *
 import random
@@ -12,42 +12,10 @@ import math
 import time
 import wave
 import pyaudio
+sys.path.insert(0, '../lib')
+import thinkdsp as td
 
-class BrickBreakerModel:
-    """ Encodes the game state of Brick Breaker """
-    def __init__(self):
-        self.number_of_lives = 3
-        self.bricks = []
-        for i in range(640//110):
-            for j in range(240//30):              
-                new_brick = Brick(10+110*i,10+30*j,100,20,(random.randint(0,255),random.randint(0,255),random.randint(0,255)))
-                self.bricks.append(new_brick)
-        self.paddle = Paddle(200,450,100,20)
-    
-    def update(self):
-        self.paddle.update()
-        
-class Brick:
-    """ Encodes the state of a brick in Brick Breaker """
-    def __init__(self,x,y,width,height,color):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.color = color
-    
-class Paddle:
-    """ Encode the state of the paddle in Brick Breaker """
-    def __init__(self,x,y,width,height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.color = (255,255,255)
-        self.vx = 0.0
-    
-    def update(self):
-        self.x += self.vx
+
 
 class PyGameBrickBreakerView:
     """ renders the BrickBreakerModel to a pygame window """
@@ -56,11 +24,8 @@ class PyGameBrickBreakerView:
         self.screen = screen
     
     def draw(self):
-        self.screen.fill(pygame.Color(0,0,0))
-        for brick in self.model.bricks:
-            pygame.draw.rect(self.screen, pygame.Color(brick.color[0], brick.color[1], brick.color[2]), pygame.Rect(brick.x, brick.y, brick.width, brick.height))
-        pygame.draw.rect(self.screen, pygame.Color(self.model.paddle.color[0], self.model.paddle.color[1], self.model.paddle.color[2]), pygame.Rect(self.model.paddle.x, self.model.paddle.y, self.model.paddle.width, self.model.paddle.height))
-        pygame.display.update()
+        pass
+
 
 class PyGameKeyboardController:
     """ Manipulate game state based on keyboard input """
@@ -84,14 +49,32 @@ class PyGameKeyboardController:
                 # Instructions = pygame.mixer.Sound()
 
             if event.key == pygame.K_1:
-                Intro= pygame.mixer.Sound("../intros/Jee_Intro.wav")
-                Intro.play()
-                self.voice = 'Jee'
+                poem = td.read_wave("../poem/Bruce_Poem.wav")
+                poem.play()
+                self.voice = 'Jiaying'
                 print(self.voice)
      
             if event.key == pygame.K_2:
-                Intro= pygame.mixer.Sound("../intros/Pinar_Intro.wav")
-                Intro.play()
+                poem = td.read_wave("../poem/James_Poem.wav")
+                poem.play()
+                self.voice = 'James'
+                print(self.voice)
+
+            if event.key == pygame.K_3:
+                poem = td.read_wave("../poem/Jee_Poem.wav")
+                poem.play()
+                self.voice = 'Jee'
+                print(self.voice)
+
+            if event.key == pygame.K_4:
+                poem = td.read_wave("../poem/Jiaying_Poem.wav")
+                poem.play()
+                self.voice = 'Jiaying'
+                print(self.voice)
+
+            if event.key == pygame.K_5:
+                poem = td.read_wave("../poem/Pinar_Poem.wav")
+                poem.play()
                 self.voice = 'Pinar'
                 print(self.voice)
 
@@ -155,27 +138,6 @@ class PyGameKeyboardController:
 
 
 
-
-
-
-
-        #     for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        #         data = stream.read(CHUNK)
-        #         frames.append(data) # 2 bytes(16 bits) per channel
-
-        # if event.key == pygame.K_t:
-        #     print("* done recording")
-        #     stream.stop_stream()
-        #     stream.close()
-        #     p.terminate()
-
-        #     wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-        #     wf.setnchannels(CHANNELS)
-        #     wf.setsampwidth(p.get_sample_size(FORMAT))
-        #     wf.setframerate(RATE)
-        #     wf.writeframes(b''.join(frames))
-        #     wf.close()
-
 if __name__ == '__main__':
     pygame.mixer.pre_init(48000, 16, 1, 4096)
     pygame.mixer.init()
@@ -184,17 +146,14 @@ if __name__ == '__main__':
     size = (640,480)
     screen = pygame.display.set_mode(size)
 
-    model = BrickBreakerModel()
-    view = PyGameBrickBreakerView(model,screen)
-    controller = PyGameKeyboardController(model)
+    view = PyGameBrickBreakerView(None,screen)
+    controller = PyGameKeyboardController(None)
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
             controller.handle_pygame_event(event)
-        model.update()
-        view.draw()
         time.sleep(.001)
 
     pygame.quit()
