@@ -13,7 +13,7 @@ import time
 import wave
 import pyaudio
 sys.path.insert(0, '../lib')
-import thinkdsp as td
+# import thinkdsp as td
 
 
 
@@ -43,39 +43,45 @@ class PyGameKeyboardController:
                 return
 
         if self.state == 'selection':
-            if event.key == pygame.K_s:
+            if event.key == pygame.K_w:
                 self.voice = 'none'
                 print('Someone is saying instructions right now')
                 # Instructions = pygame.mixer.Sound()
 
-            if event.key == pygame.K_1:
-                poem = td.read_wave("../poem/Bruce_Poem.wav")
+            if event.key == pygame.K_a:
+                poem = pygame.mixer.Sound("../poem/Bruce_Poem.wav")
                 poem.play()
-                self.voice = 'Jiaying'
+                self.voice = 'Bruce'
                 print(self.voice)
      
-            if event.key == pygame.K_2:
-                poem = td.read_wave("../poem/James_Poem.wav")
+            if event.key == pygame.K_s:
+                poem = pygame.mixer.Sound("../poem/James_Poem.wav")
                 poem.play()
                 self.voice = 'James'
                 print(self.voice)
 
-            if event.key == pygame.K_3:
-                poem = td.read_wave("../poem/Jee_Poem.wav")
+            if event.key == pygame.K_d:
+                poem = pygame.mixer.Sound("../poem/Jee_Poem.wav")
                 poem.play()
                 self.voice = 'Jee'
                 print(self.voice)
 
-            if event.key == pygame.K_4:
-                poem = td.read_wave("../poem/Jiaying_Poem.wav")
+            if event.key == pygame.K_f:
+                poem = pygame.mixer.Sound("../poem/Jiaying_Poem.wav")
                 poem.play()
                 self.voice = 'Jiaying'
                 print(self.voice)
 
-            if event.key == pygame.K_5:
-                poem = td.read_wave("../poem/Pinar_Poem.wav")
+            if event.key == pygame.K_g:
+                poem = pygame.mixer.Sound("../poem/Pinar_Poem.wav")
                 poem.play()
                 self.voice = 'Pinar'
+                print(self.voice)
+
+            if event.key == pygame.K_6:
+                poem = pygame.mixer.Sound("../poem/Dimitar_Poem.wav")
+                poem.play()
+                self.voice = 'Dimitar'
                 print(self.voice)
 
             if event.key == pygame.K_r:
