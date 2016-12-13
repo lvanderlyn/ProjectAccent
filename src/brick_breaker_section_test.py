@@ -53,59 +53,66 @@ class PyGameKeyboardController:
                     sound = pygame.mixer.Sound("../poem/Intro.wav")
                     sound.play()
                     time.sleep(sound.get_length())
-                    self.mode = "record"
+                    self.mode = "wait_for_beep"
                     self.start_time = time.time()
 
-        if self.mode == "record":
+        if self.mode == "wait_for_beep":
             if event.type == KEYDOWN:
                 if event.key == pygame.K_f:
-                    if self.button == 'none':
-                        pass
-                    else:
-                        print("start recording - press stop to terminate recording")
-                        self.mode == "busy"
-                        CHUNK = 1024 
-                        FORMAT = pyaudio.paInt16 #paInt8
-                        CHANNELS = 2 
-                        RATE = 48000 #sample rate
-                        RECORD_SECONDS = 20
-                        WAVE_OUTPUT_FILENAME = "../poem/voice{0}.wav".format(self.user_num)
-                        self.user_num = (self.user_num + 1) % 3
+                    sound = pygame.mixer.Sound("../poem/beep.wav")
+                    sound.play() 
+                    time.sleep(sound.get_length())
+                    self.mode = "record"
 
-                        p = pyaudio.PyAudio()
+        if self.mode == "record":
+            print("start recording - press stop to terminate recording")
+            self.mode == "busy"
+            CHUNK = 1024 
+            FORMAT = pyaudio.paInt16 #paInt8
+            CHANNELS = 2 
+            RATE = 48000 #sample rate
+            RECORD_SECONDS = 20
+            WAVE_OUTPUT_FILENAME = "../poem/voice{0}.wav".format(self.user_num)
+            self.user_num = (self.user_num + 1) % 3
 
-                        stream = p.open(format=FORMAT,
-                                        channels=CHANNELS,
-                                        rate=RATE,
-                                        input=True,
-                                        frames_per_buffer=CHUNK) #buffer
+            p = pyaudio.PyAudio()
 
-                        print("* recording")
+            stream = p.open(format=FORMAT,
+                            channels=CHANNELS,
+                            rate=RATE,
+                            input=True,
+                            frames_per_buffer=CHUNK) #buffer
 
-                        frames = []
+            print("* recording")
 
-                        done = False
-                        while(done == False):
-                            data = stream.read(CHUNK)
-                            frames.append(data)
-                            for newevent in pygame.event.get():
-                                if newevent.type == KEYDOWN and newevent.key == pygame.K_g:
-                                    done = True
+            frames = []
 
-                        print ("finished recording")
-                        stream.stop_stream()
-                        stream.close()
-                        p.terminate()
+            done = False
+            while(done == False):
+                data = stream.read(CHUNK)
+                frames.append(data)
+                for newevent in pygame.event.get():
+                    if newevent.type == KEYDOWN and newevent.key == pygame.K_g:
+                        done = True
 
-                        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-                        wf.setnchannels(CHANNELS)
-                        wf.setsampwidth(p.get_sample_size(FORMAT))
-                        wf.setframerate(RATE)
-                        wf.writeframes(b''.join(frames))
-                        wf.close()  
+            print ("finished recording")
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
 
-                        self.mode = "play"              
-                        self.start_time = time.time()
+            wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(p.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(frames))
+            wf.close()  
+
+            sound = pygame.mixer.Sound("../poem/recording_end.wav")
+            sound.play()
+            time.sleep(sound.get_length())
+
+            self.mode = "play"              
+            self.start_time = time.time()
 
 
         if self.mode == "play":
@@ -204,6 +211,8 @@ if __name__ == '__main__':
     view = PyGameBrickBreakerView(None,screen)
     controller = PyGameKeyboardController(None)
     running = True
+    controller.mode = "wait_for_beep"
+
     start_time = time.time()
     while running:
         d_time = time.time() - controller.start_time
