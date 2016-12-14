@@ -211,8 +211,6 @@ if __name__ == '__main__':
     view = PyGameBrickBreakerView(None,screen)
     controller = PyGameKeyboardController(None)
     running = True
-    controller.mode = "wait_for_beep"
-
     start_time = time.time()
     while running:
         d_time = time.time() - controller.start_time
